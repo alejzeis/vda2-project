@@ -1,0 +1,6 @@
+PRE-Spread:
+Total Wirelength: 3.5301
+Sqrt of total Wirelength: 1.87886
+
+POST-Spread:
+Sqrt of total Wirelength: 2.21866

@@ -1,0 +1,18 @@
+Wirelengths (Sqrt of Total Wirelength b/w only movable cells)
+
+Toy01:
+PRE-Spread: 1.87886
+POST-Spread: 2.21866
+
+Toy02:
+PRE-Spread: 7.06307
+POST-Spread: 7.14771
+
+IBM01:
+PRE-Spread: 191.567
+POST-Spread: 520.808
+
+IBM03:
+PRE-Spread: 268.59
+POST-Spread: 650.657
+
