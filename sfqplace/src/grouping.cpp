@@ -11,17 +11,11 @@
 #include <algorithm>
 #include <fstream>
 
+#include "netlist.hpp"
+
 using namespace std;
 
-struct cktGates {
-    string nodeType;
-    vector<int> fanInList;
-    vector<int> fanOutList;
-    bool isPrimaryOutput = false;
-    bool isPrimaryInput = false;
-};
-
-unordered_map<int, cktGates> netlist; // assume filled from parsing the circuit
+NetlistMap netlist; // assume filled from parsing the circuit
 
 const int GROUP_SIZE_K = 4; // default grouping size
 
@@ -75,12 +69,11 @@ void writeGroupingToFile(const string &filename) {
     cout << "Super-cell mapping written to " << filename << endl;
 }
 
-int main() {
+void doGrouping() {
     // Dummy parser: insert gate parsing code here or link to your existing parser
     // Example: parsingCircuitFile("b15_1.isc", netlist);
 
     computeLogicLevels();
     groupCells();
     writeGroupingToFile("supercell_mapping.txt");
-    return 0;
 }

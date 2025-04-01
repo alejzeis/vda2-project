@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(PA3)
+project(vda2_project)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
@@ -15,13 +15,18 @@ add_library(fastplace
 )
 target_include_directories(fastplace PRIVATE ${FASTPLACE_ROOT}/include)
 
-#add_executable(sfqplace
-#    ${SFQPLACE_ROOT}/main.cpp
-#    # TODO: more files
-#)
-#target_include_directories(sfqplace PRIVATE
-#    ${SFQPLACE_ROOT}/include
-#    ${FASTPLACE_ROOT}/include
-#)
-#target_link_libraries(sfqplace fastplace)
+add_executable(PA3 ${FASTPLACE_ROOT}/src/main.cpp)
+target_include_directories(PA3 PRIVATE ${FASTPLACE_ROOT}/include)
+target_link_libraries(PA3 fastplace)
+
+add_executable(sfqplace
+    ${SFQPLACE_ROOT}/src/main.cpp
+    ${SFQPLACE_ROOT}/src/grouping.cpp
+    ${SFQPLACE_ROOT}/src/netlist.cpp
+)
+target_include_directories(sfqplace PRIVATE
+    ${SFQPLACE_ROOT}/include
+    ${FASTPLACE_ROOT}/include
+)
+target_link_libraries(sfqplace fastplace)
 
