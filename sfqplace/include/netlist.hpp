@@ -34,7 +34,12 @@ public:
      * otherwise a return value of false indicates an error occurred.
      */
     bool saveHypergraphFile(const std::string &outFile);
-
+private:
+    /**
+     * Iterates through the netlist removing "fanout branches",
+     * a special type of node defined by the ISCAS85 format, but useless.
+     */
+    void eliminateFanoutBranches(void);
 };
 
 std::ostream& operator<<(std::ostream &out, const Netlist &netlist);

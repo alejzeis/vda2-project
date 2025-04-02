@@ -24,7 +24,7 @@ int main(int argv, char *argc[])
 
     std::cout << *netlist << std::endl;
 
-    netlist->saveHypergraphFile("c17.net");
+    netlist->saveHypergraphFile("c17");
 
     delete netlist;
 #if 0
