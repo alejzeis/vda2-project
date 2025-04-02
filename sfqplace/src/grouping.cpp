@@ -15,7 +15,7 @@
 
 using namespace std;
 
-NetlistMap netlist; // assume filled from parsing the circuit
+Netlist netlist; // assume filled from parsing the circuit
 
 const int GROUP_SIZE_K = 4; // default grouping size
 
