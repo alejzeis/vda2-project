@@ -8,9 +8,11 @@
 
 static const std::string ISCAS85_NODE_TYPE_INPUT = "inpt";
 static const std::string ISCAS85_NODE_TYPE_FANOUT_BRANCH = "from";
+static const std::string NODE_TYPE_OUTPUT = "otpt";
 
 struct NetlistNode {
     int id;
+    int hyperId;
     std::string name;
     std::string nodeType;
     std::set<int> fanInList;
@@ -35,11 +37,24 @@ public:
      */
     bool saveHypergraphFile(const std::string &outFile);
 private:
+    int nextId;
+
     /**
      * Iterates through the netlist removing "fanout branches",
      * a special type of node defined by the ISCAS85 format, but useless.
      */
     void eliminateFanoutBranches(void);
+
+    /**
+     * Assigns a "hyperId" to each node that does not skip numbers,
+     * used to create the hypergraph netlist format.
+     */
+    void consolidateIds(void);
+
+    /**
+     * Adds output pad nodes to any cell with zero fan out.
+     */
+    void addOutputs(void);
 };
 
 std::ostream& operator<<(std::ostream &out, const Netlist &netlist);
