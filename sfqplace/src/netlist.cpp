@@ -1,9 +1,12 @@
 #include "netlist.hpp"
 #include "suraj_parser.h"
 
+#include <climits>
 #include <iostream>
 #include <fstream>
+#include <ostream>
 #include <unordered_set>
+#include <queue>
 #include <sstream>
 #include <string>
 
@@ -33,7 +36,7 @@ bool Netlist::loadFromDisk(const std::string &filename) {
                 // Read in node ID
                 iss >> currentNode.id;
 
-                if (currentNode.id > this->nextId) {
+                if (currentNode.id >= this->nextId) {
                     this->nextId = currentNode.id + 1;
                 }
 
@@ -219,6 +222,54 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
     return status;
 }
 
+int Netlist::levelsBetween(int startId, int endId) {
+    int levels = -1;
+
+    // Calculate the number of logic levels between two nodes:
+    // Djikstra's algorithm
+
+    std::unordered_map<int, int> distances;
+    // min-priority queue
+    std::priority_queue<std::pair<int, int>, 
+                        std::vector<std::pair<int, int>>, 
+                        std::greater<>> djikstraQueue;
+    std::unordered_map<int, int> prev;
+
+    // Set all nodes to unvisited, no previous pointers
+    for (const auto &pair : *this) {
+        distances[pair.first] = INT_MAX;
+        prev[pair.first] = INT_MIN;
+    }
+
+    // Insert source itself in queue and set distance to zero
+    djikstraQueue.push({0, startId});
+    distances.at(startId) = 0;
+
+    // Continue while queue is non-empty and the next node isn't the end node
+    while (!djikstraQueue.empty() && djikstraQueue.top().second != endId){
+        int distance = djikstraQueue.top().first;
+        int currentNodeId = djikstraQueue.top().second;
+
+        djikstraQueue.pop();
+
+        // Only continue if we have a longer best-distance stored
+        if (distance <= distances.at(currentNodeId)) {
+            for (const int v : this->at(currentNodeId).fanOutList) {
+                if (distances.at(v) > distances.at(currentNodeId) + 1) {
+                    distances.at(v) = distances.at(currentNodeId) + 1;
+                    djikstraQueue.push({distances.at(v), v});
+                }
+            }
+        }
+    }
+
+    if (distances.at(endId) != INT_MAX) {
+        levels = distances.at(endId);
+    }
+
+    return levels;
+}
+
 void Netlist::hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFile, std::ostream &graphFile) {
     bool cellIsPad = node.isPrimaryOutput || node.isPrimaryInput;
     std::string prefix = (cellIsPad) ? "p" : "a";
@@ -280,12 +331,13 @@ void Netlist::addOutputs(void) {
         if (pair.second.fanOutList.empty() && pair.second.nodeType != NODE_TYPE_OUTPUT) {
             NetlistNode outputNode;
 
+            outputNode.id = this->nextId++;
+
             outputNodeName.clear();
             outputNodeName << outputNode.id << "OUT";
 
             // Add a new output node (represents an I/O pad)
             // and connect the cell to it
-            outputNode.id = this->nextId++;
             outputNode.isPrimaryOutput = true;
             outputNode.fanInList.insert(pair.first);
             outputNode.name = outputNodeName.str();

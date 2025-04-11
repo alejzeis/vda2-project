@@ -59,6 +59,13 @@ public:
      * Do not include the file extension, that will be added automatically.
      */
     bool saveHypergraphFile(const std::string &outFilePrefix);
+
+    /**
+     * Calculates the distance in terms of logic levels between two nodes.
+     *
+     * Returns the distance, or -1 if one or both of the node IDs are invalid.
+     */
+    int levelsBetween(int startId, int endId);
 private:
     int nextId;
 
