@@ -103,7 +103,58 @@ bool Netlist::loadFromDisk(const std::string &filename) {
 
         // Add output "pads" for any cell that has a zero fanout
         this->addOutputs();
-        this->consolidateIds();
+
+        file.close();
+    }
+
+    return status;
+}
+
+bool Netlist::loadPlacementKiaPad(const std::string &filePrefix) {
+    bool status = true;
+    std::ifstream file(filePrefix + ".kiaPad");
+    std::string line;
+
+    if (!file.is_open()) {
+        std::cerr << "ISCAS85 Parser: Error opening file: " << filePrefix << std::endl;
+        status = false;
+    } else {
+        while(std::getline(file, line)) {
+            std::istringstream lineStream(line);
+            std::string idStr;
+            int id;
+            bool isPad;
+            double x;
+            double y;
+            
+            // Get ID
+            lineStream >> idStr;
+            isPad = (idStr.at(0) == 'p');
+
+            if (isPad) {
+                // Pad found
+                id = std::stoi(idStr.substr(1)); // Skip pad prefix
+            } else {
+                id = std::stoi(idStr);
+            }
+
+            // Get coordinates
+            lineStream >> x >> y;
+
+            if (!isPad) {
+                // Ignore I/O pads, they don't move
+                
+                if (this->hyperIdMappings.find(id) == this->hyperIdMappings.end()) {
+                    std::cerr << "Failed to find node with ID: " << id;
+                    std::cerr << ", while loading placement data" << std::endl;
+                } else {
+                    int mappedId = this->hyperIdMappings.at(id);
+                    this->at(mappedId).placement.isPlaced = true;
+                    this->at(mappedId).placement.x = x;
+                    this->at(mappedId).placement.y = y;
+                }
+            }
+        }
 
         file.close();
     }
@@ -128,14 +179,19 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
     } else {
         int totalEndpoints = 0;
         int totalCells = this->size();
-        int gateCells = 0;
         std::unordered_set<int> uniqueHyperedges;
+        std::unordered_set<int> gateCells;
+        std::unordered_set<int> padCells;
         
         for (const auto &pair : *this) {
             std::cout << "Node " << pair.first << "type: " << pair.second.nodeType << std::endl;
+
             if (!pair.second.isPrimaryInput && !pair.second.isPrimaryOutput) {
-                gateCells++;
+                gateCells.insert(pair.first);
+            } else {
+                padCells.insert(pair.first);
             }
+
             if (!pair.second.fanOutList.empty()) {
                 totalEndpoints += pair.second.fanOutList.size() + 1;
                 uniqueHyperedges.insert(pair.first);
@@ -146,53 +202,40 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
         outFile << totalEndpoints << "\n";
         outFile << uniqueHyperedges.size() << "\n";
         outFile << totalCells << "\n";
-        outFile << gateCells - 1 << "\n"; // suraj_Parser adds 1 for some reason
-        
-        for (const auto &pair : *this) {
-            const NetlistNode &node = pair.second;
-            bool cellIsPad = node.isPrimaryOutput || node.isPrimaryInput;
-            if (!cellIsPad) {
-                std::string prefix = (cellIsPad) ? "p" : "a";
+        outFile << gateCells.size() - 1 << "\n"; // suraj_Parser adds 1 for some reason
 
-                // Write cell to area file
-                // Just give every cell the same area
-                areaFile << prefix << node.hyperId << " " << (cellIsPad ? 0 : DEFAULT_CELL_AREA) << std::endl;
-                
-                if (node.fanOutList.size() > 0) {
-                    outFile << prefix << node.hyperId << " s 1\n";
-
-                    for (int fanoutNode : node.fanOutList) {
-                        std::string fanoutPrefix = (this->at(fanoutNode).isPrimaryInput) ? "p" : "a";
-                        outFile << fanoutPrefix << this->at(fanoutNode).hyperId << " l\n";
-                    }
-                }
-            }
+        for (int gateId : gateCells) {
+            this->hypergraphWriteNode(this->at(gateId), areaFile, outFile);
         }
-        for (const auto &pair : *this) {
-            const NetlistNode &node = pair.second;
-            bool cellIsPad = node.isPrimaryOutput || node.isPrimaryInput;
-            if (cellIsPad) {
-                std::string prefix = (cellIsPad) ? "p" : "a";
 
-                // Write cell to area file
-                // Just give every cell the same area
-                areaFile << prefix << node.hyperId << " " << (cellIsPad ? 0 : DEFAULT_CELL_AREA) << std::endl;
-                
-                if (node.fanOutList.size() > 0) {
-                    outFile << prefix << node.hyperId << " s 1\n";
-
-                    for (int fanoutNode : node.fanOutList) {
-                        std::string fanoutPrefix = (this->at(fanoutNode).isPrimaryInput) ? "p" : "a";
-                        outFile << fanoutPrefix << this->at(fanoutNode).hyperId << " l\n";
-                    }
-                }
-            }
+        for (int padId : padCells) {
+            this->hypergraphWriteNode(this->at(padId), areaFile, outFile);
         }
+       
         outFile.close();
         areaFile.close();
     }
 
     return status;
+}
+
+void Netlist::hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFile, std::ostream &graphFile) {
+    bool cellIsPad = node.isPrimaryOutput || node.isPrimaryInput;
+    std::string prefix = (cellIsPad) ? "p" : "a";
+
+    // Write cell to area file
+    // Just give every cell the same area
+    areaFile << prefix << node.hypergraphId;
+    areaFile << " " << (cellIsPad ? 0 : DEFAULT_CELL_AREA) << std::endl;
+    
+    if (node.fanOutList.size() > 0) {
+        graphFile << prefix << node.hypergraphId << " s 1\n";
+
+        for (int fanoutNode : node.fanOutList) {
+            std::string fanoutPrefix = (this->at(fanoutNode).isPrimaryInput) ? "p" : "a";
+            graphFile << fanoutPrefix << this->at(fanoutNode).hypergraphId << " l\n";
+        }
+    }
 }
 
 void Netlist::eliminateFanoutBranches(void) {
@@ -261,9 +304,12 @@ void Netlist::consolidateIds(void) {
 
     for (auto &pair : *this) {
         if (pair.second.isPrimaryInput || pair.second.isPrimaryOutput) {
-            pair.second.hyperId = padCounter++;
+            pair.second.hypergraphId = padCounter++;
         } else {
-            pair.second.hyperId = moveableCellCounter++;
+            pair.second.hypergraphId = moveableCellCounter++;
+
+            // Only map moveable cells
+            this->hyperIdMappings[pair.second.hypergraphId] = pair.second.id;
         }
     }
 }
@@ -275,9 +321,12 @@ std::ostream& operator<<(std::ostream &out, const Netlist &netlist) {
     for (const auto &pair : netlist) {
         const NetlistNode &node = pair.second;
 
-        out << "Node " << node.id << " (" << node.name << ", hyper: " << node.hyperId << "): " << node.nodeType
+        out << "Node " << node.id << "[" << node.nodeType << "] ";
+        out << "(" << node.name << ", hypergraph ID: " << node.hypergraphId << "): "
                   << " Fanin: " << node.fanInList.size() << " Fanout: " 
                   << node.fanOutList.size() << "\n";
+        out << "  Placed(yes/no: " << node.placement.isPlaced << "): ";
+        out << node.placement.x << " " << node.placement.y << "\n";
 
         if (!node.fanInList.empty()) {
             out << "  Fanin nodes: ";

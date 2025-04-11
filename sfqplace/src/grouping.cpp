@@ -1,5 +1,6 @@
 // Super-cell Grouping Module (k = 4 default)
 // Includes logic level computation without needing precomputed topological sort
+#include "grouping.hpp"
 
 #include <iostream>
 #include <unordered_map>
@@ -15,15 +16,13 @@
 
 using namespace std;
 
-Netlist netlist; // assume filled from parsing the circuit
-
 const int GROUP_SIZE_K = 4; // default grouping size
 
 // Map from level to all gates at that level
 map<int, vector<int>> levelToNodes;
 unordered_map<int, int> nodeLevelMap;
 
-void computeLogicLevels() {
+void computeLogicLevels(Netlist &netlist) {
     unordered_map<int, int> inDegree;
     for (const auto &[id, gate] : netlist)
         inDegree[id] = gate.fanInList.size();
@@ -69,11 +68,11 @@ void writeGroupingToFile(const string &filename) {
     cout << "Super-cell mapping written to " << filename << endl;
 }
 
-void doGrouping() {
+void doGrouping(Netlist &netlist) {
     // Dummy parser: insert gate parsing code here or link to your existing parser
     // Example: parsingCircuitFile("b15_1.isc", netlist);
 
-    computeLogicLevels();
+    computeLogicLevels(netlist);
     groupCells();
     writeGroupingToFile("supercell_mapping.txt");
 }

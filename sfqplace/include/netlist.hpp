@@ -2,21 +2,35 @@
 #define SFQPLACE_NETLIST_HPP
 
 #include <string>
-#include <vector>
-#include <set>
+#include <unordered_set>
 #include <unordered_map>
 
 static const std::string ISCAS85_NODE_TYPE_INPUT = "inpt";
 static const std::string ISCAS85_NODE_TYPE_FANOUT_BRANCH = "from";
 static const std::string NODE_TYPE_OUTPUT = "otpt";
 
+struct CellPlacementData {
+    // True if placement data is available, false if not
+    bool isPlaced;
+
+    double x;
+    double y;
+};
+
 struct NetlistNode {
+    // identifier from the ISCAS file
     int id;
-    int hyperId;
+    // identifier for hypergraph format, used by suraj_parser and Fastplace
+    int hypergraphId;
+
     std::string name;
+    // Type of the node, see ISCAS_85_NODE_TYPE_*
     std::string nodeType;
-    std::set<int> fanInList;
-    std::set<int> fanOutList;
+    std::unordered_set<int> fanInList;
+    std::unordered_set<int> fanOutList;
+
+    CellPlacementData placement;
+
     bool isPrimaryOutput = false;
     bool isPrimaryInput = false;
 };
@@ -31,13 +45,28 @@ public:
     bool loadFromDisk(const std::string &filename);
 
     /**
+     * Load placement information for this netlist from FastPlace .kiaPad output.
+     *
+     * Do not include the file extension, that will be added automatically.
+     */
+    bool loadPlacementKiaPad(const std::string &filePrefix);
+
+    /**
      * Saves the netlist in the hypergraph format used by the FastPlace
      * implementation (.net files). If successful this function returns true,
      * otherwise a return value of false indicates an error occurred.
+     *
+     * Do not include the file extension, that will be added automatically.
      */
-    bool saveHypergraphFile(const std::string &outFile);
+    bool saveHypergraphFile(const std::string &outFilePrefix);
 private:
     int nextId;
+
+    // Mapping of hypergraph Ids (from fastplace) to the main NetlistNode ids
+    // Does not include I/O pads!
+    std::unordered_map<int, int> hyperIdMappings;
+
+    void hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFile, std::ostream &graphFile); 
 
     /**
      * Iterates through the netlist removing "fanout branches",
@@ -46,7 +75,7 @@ private:
     void eliminateFanoutBranches(void);
 
     /**
-     * Assigns a "hyperId" to each node that does not skip numbers,
+     * Assigns a "hypergraphId" to each node that does not skip numbers,
      * used to create the hypergraph netlist format.
      */
     void consolidateIds(void);

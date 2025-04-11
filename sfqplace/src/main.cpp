@@ -1,15 +1,19 @@
 // Based on fastplace main.cpp
 #include <iostream>
 #include <cstring>
+#include <ostream>
 
 #include "suraj_parser.h"
 #include "placer.hpp"
 #include "netlist.hpp"
+#include "grouping.hpp"
+
 
 int main(int argv, char *argc[])
 {
     char inareFileName[100];
     char innetFileName[100];
+    char iniscasFileName[100];
     char inPadLocationFileName[100];
 
     if (argv!=2) {
@@ -17,24 +21,24 @@ int main(int argv, char *argc[])
         return 1;
     }
 
-    std::cout << "Reading circuit file " << argc[1] << std::endl;
-
-    Netlist *netlist = new Netlist();
-    netlist->loadFromDisk("c17.isc");
-
-    std::cout << *netlist << std::endl;
-
-    netlist->saveHypergraphFile("c17");
-
-    delete netlist;
-#if 0
     strcpy (inareFileName, argc[1]);
     strcat(inareFileName, ".are");
     strcpy(innetFileName,argc[1]);
     strcat(innetFileName,".net");
+    strcpy(iniscasFileName, argc[1]);
+    strcat(iniscasFileName, ".isc");
     strcpy(inPadLocationFileName,argc[1]);
     strcat(inPadLocationFileName,".kiaPad");
 
+    std::cout << "Reading ISCAS circuit file " << iniscasFileName << std::endl;
+
+    Netlist *netlist = new Netlist();
+    netlist->loadFromDisk(iniscasFileName);
+    
+    std::cout << "Converting to hypergraph format." << std::endl;
+    netlist->saveHypergraphFile(argc[1]);
+
+    std::cout << "Feeding hypergraph to FastPlace" << std::endl;
     int success = parseIbmFile(inareFileName, innetFileName, inPadLocationFileName);
     if (success == -1) {
         cout << "Error reading input file(s)" << endl;
@@ -44,11 +48,24 @@ int main(int argv, char *argc[])
     printf("\nNumber of vertices,hyper = %d %d\n",numCellsAndPads,numhyper);
 
     PA3Placement::AnalyticPlacer placer;
+
+    std::cout << "Invoking FastPlace" << std::endl;
     placer.doPlacement();
+
+    std::cout << "Loading initial Placement data" << std::endl;
+
+    // Placement is saved in "spread.kiaPad"
+    netlist->loadPlacementKiaPad("spread");
+
+    std::cout << "NETLIST OBJECT DUMP:" << std::endl;
+    std::cout << *netlist << std::endl;
+
+    doGrouping(*netlist);
+
+    delete netlist;
 
     free(pinLocations);
     free(hEdge_idxToFirstEntryInPinArray);
     free(cellPinArray);
     free(hyperwts);
-#endif
 }
