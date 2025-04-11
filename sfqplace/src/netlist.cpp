@@ -103,6 +103,7 @@ bool Netlist::loadFromDisk(const std::string &filename) {
 
         // Add output "pads" for any cell that has a zero fanout
         this->addOutputs();
+        this->consolidateIds();
 
         file.close();
     }
@@ -132,7 +133,7 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
         
         for (const auto &pair : *this) {
             std::cout << "Node " << pair.first << "type: " << pair.second.nodeType << std::endl;
-            if (!pair.second.isPrimaryInput) {
+            if (!pair.second.isPrimaryInput && !pair.second.isPrimaryOutput) {
                 gateCells++;
             }
             if (!pair.second.fanOutList.empty()) {
