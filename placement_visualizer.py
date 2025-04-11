@@ -1,45 +1,47 @@
-import matplotlib.pyplot as plt
 import sys
+import matplotlib.pyplot as plt
 
 def plot_points(file_path):
-    # Lists to store x and y coordinates
-    x_coords = []
-    y_coords = []
+    # Separate lists for regular and 'p' prefixed coordinates
+    x_cells, y_cells = [], []
+    x_pads, y_pads = [], []
 
     valid = 0
     total = 0
 
-    # Read points from the file
     with open(file_path, 'r') as file:
         for line in file:
-            # Split the line into ID, x, and y
-            _, x, y = map(str, line.strip().split())
-            x_coords.append(float(x))
-            y_coords.append(float(y))
+            id_str, x_str, y_str = line.strip().split()
+            x = float(x_str)
+            y = float(y_str)
+
+            if id_str.startswith('p'):
+                x_pads.append(x)
+                y_pads.append(y)
+            else:
+                x_cells.append(x)
+                y_cells.append(y)
 
             total += 1
 
-            if float(x) >= 0 and float(x) <= 101 and float(y) >= 0 and float(y) <= 99:
+            if 0 <= x <= 101 and 0 <= y <= 99:
                 valid += 1
 
     print(f'Total cells (including I/O pads): {total}, valid: {valid}')
 
-    # Plot the points
-    plt.scatter(x_coords, y_coords, label='Cells/IO Pads', s=1)
+    # Plot cells
+    plt.scatter(x_cells, y_cells, c='blue', label='Cells', s=1)
+    # Plot I/O pads
+    plt.scatter(x_pads, y_pads, c='red', label='I/O Pads', s=5)
 
-    # Add labels and title
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.title(f'Placement: {file_path}')
-
-    # Add legend
     plt.legend()
-
-    # Show the plot
     plt.show()
 
 if __name__ == "__main__":
-    if (len(sys.argv) != 2):
+    if len(sys.argv) != 2:
         print("Usage: placement_visualizer [kiaPad file]")
     else:
         plot_points(sys.argv[1])
