@@ -26,6 +26,82 @@ static const int NORMALIZATION_FACTOR = MAX_SEARCH_LEVEL;
 map<int, vector<int>> levelToNodes;
 unordered_map<int, int> nodeLevelMap;
 
+unordered_map<int, Subgraph*> subgraphs;
+
+/**
+ * Makes a subgraph from the main Netlist. Only adds nodes
+ * of the specified logic level to the map
+ */
+static Subgraph* makeSubgraph(Netlist &netlist, int logicLevel) {
+    Subgraph *graph = nullptr;
+
+    if (levelToNodes.find(logicLevel) != levelToNodes.end()) {
+        graph = new Subgraph();
+
+        // Add verticies from all nodes at this logic level
+        for (const int gateID : levelToNodes.at(logicLevel)) {
+            SubgraphVertex vert;
+            vert.id = gateID;
+
+            graph->addVertex(vert);
+        }
+    }
+
+    return graph;
+}
+
+Subgraph::~Subgraph() {
+    for (auto &edge : this->edges) {
+        delete edge;
+    }
+}
+
+void Subgraph::addVertex(const SubgraphVertex &vertex) {
+    this->graph[vertex.id] = vertex;
+}
+
+SubgraphVertex& Subgraph::getVertex(int id) {
+    return this->graph.at(id);
+}
+
+void Subgraph::addEdge(int origin, int target, double weight) {
+    SubgraphEdge *edge;
+    SubgraphVertex &originVert = this->graph.at(origin);
+    SubgraphVertex &targetVert = this->graph.at(target);
+
+    // Check if an edge already exists in the graph
+    if (originVert.connections.find(target) != originVert.connections.end()) {
+        edge = originVert.connections.at(target);
+
+        // Update weight by adding
+        edge->weight += weight;
+    } else {
+        edge = new SubgraphEdge;
+        edge->originNode = origin;
+        edge->targetNode = target;
+        edge->weight = weight;
+
+        // Add edge to graph
+        this->edges.insert(edge);
+        originVert.connections[target] = edge;
+        targetVert.connections[origin] = edge;
+    }
+}
+
+void Subgraph::dump(std::ostream &out) const {
+    for (const auto &[id, vert] : this->graph) {
+        std::cout << id << " connections and weights:" << std::endl;
+        for (const auto &[target, con] : vert.connections) {
+            std::cout << "  -> " << target << " (weight: " << con->weight << ")" << std::endl;
+        }
+    }
+}
+
+std::ostream& operator<<(std::ostream &out, const Subgraph &subgraph) {
+    subgraph.dump(out);
+    return out;
+}
+
 std::unordered_set<NetlistNode*> findNeighbors(Netlist &netlist, int baseNode, int maxSearchLevel) {
     std::unordered_set<NetlistNode*> neighbors;
     std::queue<NetlistNode*> Q;
@@ -117,10 +193,14 @@ void connectivityGraphProcessing(Netlist &netlist) {
                         if (u != neighbor->id && v != neighbor->id) {
                             int levelDiff = abs(nodeLevelMap[u] - nodeLevelMap[neighbor->id]);
                             double edgeWeight = NORMALIZATION_FACTOR / (levelDiff * 1.0);
+
+                            subgraphs.at(level)->addEdge(u, v, edgeWeight);
+#if 0
                             std::cout << "Edge Weight added between " << u << " (" << nodeLevelMap[u] << ")";
                             std::cout << " and " << neighbor->id << " (" << nodeLevelMap[neighbor->id] << ")";
                             std::cout << " is " << edgeWeight;
                             std::cout << " (v is " << v << ")" << std::endl;
+#endif
                         }
                     }
                 }
@@ -155,7 +235,18 @@ void doGrouping(Netlist &netlist) {
     // Example: parsingCircuitFile("b15_1.isc", netlist);
 
     computeLogicLevels(netlist);
+
+    // Create the subgraphs for each logic level
+    for (const auto &[level, nodes] : levelToNodes) {
+        subgraphs[level] = makeSubgraph(netlist, level);
+    }
+
     connectivityGraphProcessing(netlist);
+
+    std::cout << "Subgraph 1" << std::endl << *(subgraphs.at(1)) << std::endl;
+
     //groupCells(netlist);
     writeGroupingToFile("supercell_mapping.txt");
+
+    // TODO: delete subgraphs?
 }
