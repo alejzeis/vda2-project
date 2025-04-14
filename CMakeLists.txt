@@ -10,6 +10,14 @@ set(SFQPLACE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/sfqplace)
 
 find_package(CGAL REQUIRED)
 
+# Import hmetis static library 
+if (NOT HMETIS_PATH)
+    message(FATAL_ERROR "Please define variable HMETIS_PATH: path to libhmetis.a")
+else()
+    add_library(hmetis STATIC IMPORTED)
+    set_target_properties(hmetis PROPERTIES IMPORTED_LOCATION ${HMETIS_PATH})
+endif()
+
 add_library(fastplace
     ${FASTPLACE_ROOT}/src/suraj_parser.cpp
     ${FASTPLACE_ROOT}/src/matrix.cpp
@@ -30,5 +38,5 @@ target_include_directories(sfqplace PRIVATE
     ${SFQPLACE_ROOT}/include
     ${FASTPLACE_ROOT}/include
 )
-target_link_libraries(sfqplace fastplace gmp)
+target_link_libraries(sfqplace fastplace gmp hmetis)
 
