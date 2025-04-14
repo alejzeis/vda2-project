@@ -3,6 +3,7 @@
 #include "grouping.hpp"
 
 #include <iostream>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -11,6 +12,9 @@
 #include <cmath>
 #include <algorithm>
 #include <fstream>
+
+#include <CGAL/Min_circle_2.h>
+#include <CGAL/convex_hull_2.h>
 
 #include "netlist.hpp"
 #include "util.hpp"
@@ -36,7 +40,7 @@ static Subgraph* makeSubgraph(Netlist &netlist, int logicLevel) {
     Subgraph *graph = nullptr;
 
     if (levelToNodes.find(logicLevel) != levelToNodes.end()) {
-        graph = new Subgraph();
+        graph = new Subgraph(logicLevel);
 
         // Add verticies from all nodes at this logic level
         for (const int gateID : levelToNodes.at(logicLevel)) {
@@ -50,9 +54,83 @@ static Subgraph* makeSubgraph(Netlist &netlist, int logicLevel) {
     return graph;
 }
 
+static double euclidean_distance(const Point& a, const Point& b)
+{
+    double dx = a.x() - b.x();
+    double dy = a.y() - b.y();
+    return std::sqrt(dx * dx + dy * dy);
+}
+
 Subgraph::~Subgraph() {
     for (auto &edge : this->edges) {
         delete edge;
+    }
+}
+
+void Subgraph::calcMinMaxCellDistances(Netlist &netlist) {
+    // Find minimum distance between all points
+    // TODO: This is brute force method. Update this to a faster
+    // version if necessary
+    this->minCellDistance = std::numeric_limits<double>::max();
+
+    for (const auto &[id1, v1] : this->graph) {
+        if (netlist.at(id1).placement.isPlaced) {
+            for (const auto &[id2, v2] : this->graph) {
+                NetlistNode &node1 = netlist.at(id1);
+                NetlistNode &node2 = netlist.at(id2);
+
+                if (id2 != id1 && node2.placement.isPlaced) {
+                    double dist = sqrt(pow(node1.placement.p.x() - node2.placement.p.x(), 2) +
+                                       pow(node1.placement.p.y() - node2.placement.p.y(), 2));
+
+                    this->minCellDistance = std::min(this->minCellDistance, dist);
+                }
+            }
+        }
+    }
+
+    this->findMaxDistance(netlist);
+}
+
+void Subgraph::findMaxDistance(Netlist &netlist) {
+    std::vector<Point> hull;
+    std::vector<Point> points;
+
+    // Gather all cells with placement info
+    for (const auto &[id, v] : this->graph) {
+        if (netlist.at(id).placement.isPlaced) {
+            points.push_back(netlist.at(id).placement.p);
+        }
+    }
+
+    // Finds maximum distance between all points using Convex Hull from CGAL
+    // (ChatGPT generated code)
+
+    CGAL::convex_hull_2(points.begin(), points.end(), std::back_inserter(hull));
+
+    double max_dist = 0.0;
+    std::pair<Point, Point> farthest_pair;
+
+    int n = hull.size();
+    if (n < 2) {
+        this->maxCellDistance = 0;
+    } else { 
+        int j = 1;
+        for (int i = 0; i < n; ++i) {
+            while (euclidean_distance(hull[i], hull[(j + 1) % n]) > euclidean_distance(hull[i], hull[j]))
+                j = (j + 1) % n;
+
+            double d = euclidean_distance(hull[i], hull[j]);
+            if (d > max_dist) {
+                max_dist = d;
+                farthest_pair = {hull[i], hull[j]};
+            }
+        }
+
+        this->maxCellDistance = max_dist;
+        std::cout << "The maximum distance is " << this->maxCellDistance << " between: ";
+        std::cout << farthest_pair.first.x() << " " << farthest_pair.first.y() << " and ";
+        std::cout << farthest_pair.second.x() << " " << farthest_pair.second.y() << std::endl;
     }
 }
 
@@ -89,6 +167,9 @@ void Subgraph::addEdge(int origin, int target, double weight) {
 }
 
 void Subgraph::dump(std::ostream &out) const {
+    std::cout << "Maximum/Minimum Cell Distance: " << this->maxCellDistance << " ";
+    std::cout << this->minCellDistance << std::endl;
+
     for (const auto &[id, vert] : this->graph) {
         std::cout << id << " connections and weights:" << std::endl;
         for (const auto &[target, con] : vert.connections) {
@@ -209,6 +290,12 @@ void connectivityGraphProcessing(Netlist &netlist) {
     }
 }
 
+void distanceGraphProcessing(Netlist &netlist) {
+    for (const auto &[level, graph] : subgraphs) {
+        
+    }
+}
+
 void groupCells(Netlist &netlist) {
     int superCellID = 0;
     for (const auto &[level, nodes] : levelToNodes) {
@@ -243,7 +330,8 @@ void doGrouping(Netlist &netlist) {
 
     connectivityGraphProcessing(netlist);
 
-    std::cout << "Subgraph 1" << std::endl << *(subgraphs.at(1)) << std::endl;
+    subgraphs.at(2)->calcMinMaxCellDistances(netlist);
+    std::cout << "Subgraph 2" << std::endl << *(subgraphs.at(2)) << std::endl;
 
     //groupCells(netlist);
     writeGroupingToFile("supercell_mapping.txt");

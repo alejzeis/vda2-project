@@ -17,7 +17,18 @@ struct SubgraphVertex {
 
 class Subgraph {
     public:
+        Subgraph(int logicLevel) {
+            this->level = logicLevel;
+        }
+
         ~Subgraph();
+
+        /**
+         * Calculates the minimum and maximum cell distances in both
+         * X and Y dimensions from the original netlist placement information
+         * for all cells in this subgraph (and by extension this logic level)
+         */
+        void calcMinMaxCellDistances(Netlist &netlist);
 
         void addVertex(const SubgraphVertex &vert);
         void addEdge(int origin, int target, double weight);
@@ -25,9 +36,17 @@ class Subgraph {
         SubgraphVertex& getVertex(int id);
 
         void dump(std::ostream &out) const;
+        int getLogicLevel() const { return level; };
     private:
+        int level;
+
+        double minCellDistance;
+        double maxCellDistance;
+
         std::unordered_map<int, SubgraphVertex> graph;
         std::unordered_set<SubgraphEdge*> edges;
+
+        void findMaxDistance(Netlist &netlist);
 };
 
 std::ostream& operator<<(std::ostream &out, const Subgraph &subgraph);

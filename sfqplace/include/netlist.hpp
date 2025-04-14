@@ -5,16 +5,22 @@
 #include <unordered_set>
 #include <unordered_map>
 
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Polygon_2.h>
+
 static const std::string ISCAS85_NODE_TYPE_INPUT = "inpt";
 static const std::string ISCAS85_NODE_TYPE_FANOUT_BRANCH = "from";
 static const std::string NODE_TYPE_OUTPUT = "otpt";
+
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef K::Point_2 Point;
 
 struct CellPlacementData {
     // True if placement data is available, false if not
     bool isPlaced;
 
-    double x;
-    double y;
+    Point p;
 };
 
 struct NetlistNode {

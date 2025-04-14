@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 set(FASTPLACE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/fastplace)
 set(SFQPLACE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/sfqplace)
 
+find_package(CGAL REQUIRED)
+
 add_library(fastplace
     ${FASTPLACE_ROOT}/src/suraj_parser.cpp
     ${FASTPLACE_ROOT}/src/matrix.cpp
@@ -28,5 +30,5 @@ target_include_directories(sfqplace PRIVATE
     ${SFQPLACE_ROOT}/include
     ${FASTPLACE_ROOT}/include
 )
-target_link_libraries(sfqplace fastplace)
+target_link_libraries(sfqplace fastplace gmp)
 

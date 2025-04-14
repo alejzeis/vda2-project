@@ -153,8 +153,7 @@ bool Netlist::loadPlacementKiaPad(const std::string &filePrefix) {
                 } else {
                     int mappedId = this->hyperIdMappings.at(id);
                     this->at(mappedId).placement.isPlaced = true;
-                    this->at(mappedId).placement.x = x;
-                    this->at(mappedId).placement.y = y;
+                    this->at(mappedId).placement.p = Point(x, y);
                 }
             }
         }
@@ -378,7 +377,7 @@ std::ostream& operator<<(std::ostream &out, const Netlist &netlist) {
                   << " Fanin: " << node.fanInList.size() << " Fanout: " 
                   << node.fanOutList.size() << "\n";
         out << "  Placed(yes/no: " << node.placement.isPlaced << "): ";
-        out << node.placement.x << " " << node.placement.y << "\n";
+        out << node.placement.p.x() << " " << node.placement.p.y() << "\n";
 
         if (!node.fanInList.empty()) {
             out << "  Fanin nodes: ";
