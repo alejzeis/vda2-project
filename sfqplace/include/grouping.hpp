@@ -35,8 +35,15 @@ class Subgraph {
 
         SubgraphVertex& getVertex(int id);
 
+        std::unordered_map<int, SubgraphVertex>& getVertices(void) {
+            return this->graph;
+        };
+
         void dump(std::ostream &out) const;
-        int getLogicLevel() const { return level; };
+
+        int getLogicLevel(void) const { return level; };
+        double getMinCellDistance(void) const { return minCellDistance; };
+        double getMaxCellDistance(void) const { return maxCellDistance; };
     private:
         int level;
 

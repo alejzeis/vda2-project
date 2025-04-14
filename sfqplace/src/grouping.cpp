@@ -25,6 +25,8 @@ const int GROUP_SIZE_K = 4; // default grouping size
 
 static const int MAX_SEARCH_LEVEL = 2;
 static const int NORMALIZATION_FACTOR = MAX_SEARCH_LEVEL;
+// TODO: what use for Beta?
+static const int DISTANCE_NORMALIZATION_FACTOR = 2;
 
 // Map from level to all gates at that level
 map<int, vector<int>> levelToNodes;
@@ -90,6 +92,13 @@ void Subgraph::calcMinMaxCellDistances(Netlist &netlist) {
     }
 
     this->findMaxDistance(netlist);
+
+    // Workaround to division by zero in distance graph processing
+    // We need these two values to be different
+    if (this->minCellDistance == this->maxCellDistance) {
+        // Make this distance slightly bigger
+        this->maxCellDistance += 0.01;
+    }
 }
 
 void Subgraph::findMaxDistance(Netlist &netlist) {
@@ -113,7 +122,7 @@ void Subgraph::findMaxDistance(Netlist &netlist) {
 
     int n = hull.size();
     if (n < 2) {
-        this->maxCellDistance = 0;
+        this->maxCellDistance = 0; 
     } else { 
         int j = 1;
         for (int i = 0; i < n; ++i) {
@@ -128,9 +137,13 @@ void Subgraph::findMaxDistance(Netlist &netlist) {
         }
 
         this->maxCellDistance = max_dist;
+
+#if 1
+        std::cout << "[" << this->level << "]: "; 
         std::cout << "The maximum distance is " << this->maxCellDistance << " between: ";
         std::cout << farthest_pair.first.x() << " " << farthest_pair.first.y() << " and ";
         std::cout << farthest_pair.second.x() << " " << farthest_pair.second.y() << std::endl;
+#endif
     }
 }
 
@@ -291,8 +304,38 @@ void connectivityGraphProcessing(Netlist &netlist) {
 }
 
 void distanceGraphProcessing(Netlist &netlist) {
-    for (const auto &[level, graph] : subgraphs) {
-        
+    for (const auto &[level, subgraph] : subgraphs) {
+        // TODO: is Ximin and Ximax only X/Y dimension or euclidean distance?
+
+        for (const auto &[id, vertex] : subgraph->getVertices()) {
+            for (const auto &[id2, vertex2] : subgraph->getVertices()) {
+                if (id != id2 && netlist.at(id).placement.isPlaced 
+                        && netlist.at(id2).placement.isPlaced) {
+                    // Calculate distance between cells
+                    double Xu = netlist.at(id).placement.p.x();
+                    double Xv = netlist.at(id2).placement.p.y();
+                    double Yu = netlist.at(id).placement.p.x();
+                    double Yv = netlist.at(id2).placement.p.y();
+
+                    double Wx = DISTANCE_NORMALIZATION_FACTOR * (
+                            1 - ((abs(Xu - Xv) - subgraph->getMinCellDistance())
+                                / (subgraph->getMaxCellDistance() - subgraph->getMinCellDistance()))
+                            );
+                    double Wy = DISTANCE_NORMALIZATION_FACTOR * (
+                            1 - ((abs(Yu - Yv) - subgraph->getMinCellDistance())
+                                / (subgraph->getMaxCellDistance() - subgraph->getMinCellDistance()))
+                            );
+
+                    std::cout << "Xu: " << Xu << ", " << Xv;
+                    std::cout << " Min Max: " << subgraph->getMinCellDistance() << " ";
+                    std::cout << subgraph->getMaxCellDistance() << std::endl;
+
+                    double W = floor(sqrt(pow(Wx, 2) + pow(Wy, 2)));
+
+                    subgraph->addEdge(id, id2, W);
+                }
+            }
+        }
     }
 }
 
@@ -328,10 +371,22 @@ void doGrouping(Netlist &netlist) {
         subgraphs[level] = makeSubgraph(netlist, level);
     }
 
+    // Run connectivity-based graph processing step
     connectivityGraphProcessing(netlist);
 
-    subgraphs.at(2)->calcMinMaxCellDistances(netlist);
-    std::cout << "Subgraph 2" << std::endl << *(subgraphs.at(2)) << std::endl;
+    // Calculate min/max cell distances
+    for (const auto &[level, subgraph] : subgraphs) {
+        subgraph->calcMinMaxCellDistances(netlist);
+    }
+
+    std::cout << "Subgraph 3 (Connectivity Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
+
+    // Run Distance-based Graph Processing step
+    distanceGraphProcessing(netlist);
+
+    std::cout << "Subgraph 3 (Distance Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
+
+    // TODO: Partitioning
 
     //groupCells(netlist);
     writeGroupingToFile("supercell_mapping.txt");
