@@ -33,6 +33,7 @@ add_executable(sfqplace
     ${SFQPLACE_ROOT}/src/main.cpp
     ${SFQPLACE_ROOT}/src/grouping.cpp
     ${SFQPLACE_ROOT}/src/netlist.cpp
+    ${SFQPLACE_ROOT}/src/partitioning.cpp
 )
 target_include_directories(sfqplace PRIVATE
     ${SFQPLACE_ROOT}/include

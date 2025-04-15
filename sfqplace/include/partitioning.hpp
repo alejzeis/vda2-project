@@ -10,15 +10,15 @@ extern "C" {
     void HMETIS_PartKway(int nvtxs, int nhedges, int *vwgts, int *eptr, int *eind, int *hewgts, int nparts, int ubfactor, int *options, int *part, int *edgecut);
 }
 
-class PWayPartioner {
+class PWayPartitioner {
 public:
     /**
      * Creates a new P-way partitioner for the given subgraph,
      * preparing to partition it into P groups
      */
-    PWayPartioner(Subgraph *subgraph, int groups);
+    PWayPartitioner(Subgraph *subgraph, int groups);
 
-    ~PWayPartioner();
+    ~PWayPartitioner();
 
     /**
      * Converts the subgraph internally to an input format readable by HMETIS,
@@ -37,12 +37,31 @@ public:
     std::unordered_map<int, int> getPartitions();
 
 private:
+    Subgraph *subgraph;
     int desiredPartitionCount;
 
     int nvtxs;
     int nhedges;
+
+    // Hyperedge weights array. hewgts[i] = weight of hyperedge i
+    int *hewgts;
+    // Map of hyperedge ID to the beginning of it's vertex list in "eind"
     int *eptr;
+    // List of verticies in each hyperedge
     int *eind;
+
+    // Array that maps the index to which partition it belongs to
+    int *partitionedData;
+
+    // Mapping from the subgraph vertex IDs to IDs for HMETIS
+    // IDs in the subgraph are same as the netlist, so they might not start at zero
+    // HMETIS needs consecutive IDs starting at 0
+    std::unordered_map<int, int> hmetisIdsMap;
+    // Mapping from HMETIS IDs to subgraph vertex IDs
+    std::vector<int> sgraphIdsMap;
+
+    // Frees all structures allocated by/for HMETIS.
+    void freeHMETISStructures(void);
 };
 
 #endif // SFQPLACE_PARTITIONING_HPP

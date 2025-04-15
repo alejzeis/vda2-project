@@ -39,6 +39,8 @@ class Subgraph {
             return this->graph;
         };
 
+        std::unordered_set<SubgraphEdge*> getEdges() { return this->edges; };
+
         void dump(std::ostream &out) const;
 
         int getLogicLevel(void) const { return level; };

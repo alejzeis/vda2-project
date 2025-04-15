@@ -162,9 +162,16 @@ void Subgraph::addEdge(int origin, int target, double weight) {
 
     // Check if an edge already exists in the graph
     if (originVert.connections.find(target) != originVert.connections.end()) {
+        // Edge exists origin -> target. Update it
         edge = originVert.connections.at(target);
 
         // Update weight by adding
+        edge->weight += weight;
+    } else if (targetVert.connections.find(origin) != targetVert.connections.end()) {
+        // Edge exists target -> origin.
+        // We don't care about direction, so this is the same edge. update it
+        edge = targetVert.connections.at(origin);
+
         edge->weight += weight;
     } else {
         edge = new SubgraphEdge;
