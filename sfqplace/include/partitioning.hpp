@@ -60,6 +60,10 @@ private:
     // Mapping from HMETIS IDs to subgraph vertex IDs
     std::vector<int> sgraphIdsMap;
 
+    void writeHMETISInput(const std::unordered_map<int, std::unordered_set<int>> &hedges,
+                          const std::vector<int> &weights);
+    int invokeHMETIS(void);
+
     // Frees all structures allocated by/for HMETIS.
     void freeHMETISStructures(void);
 };

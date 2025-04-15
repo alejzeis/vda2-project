@@ -3,6 +3,9 @@
 
 #include <unordered_set>
 
+// TODO: Pick UBFACTOR?
+static const int UBFACTOR = 8;
+
 // https://stackoverflow.com/questions/20590656/error-for-hash-function-of-pair-of-ints
 struct pairHashInteger final {
     size_t operator()(const std::pair<int, int>& p) const noexcept {
@@ -41,8 +44,12 @@ void PWayPartitioner::freeHMETISStructures(void) {
 }
 
 int PWayPartitioner::doPartition(void) {
+    // Use default HMETIS options
+    int hmetisOptions[9] = {0, };
+
     // Map from HMETIS vertex ID to it's connections (hyperedges)
     std::unordered_map<int, std::unordered_set<int>> hyperedges;
+    std::vector<int> weights;
     int hyperedgeEndpointCount = 0;
 
     // First convert the subgraph into the hypergraph format for HMETIS
@@ -79,8 +86,12 @@ int PWayPartitioner::doPartition(void) {
             // Added 2 elements: one for the origin and one for the target
             hyperedgeEndpointCount += 2;
         }
+
+        // Store weight
+        weights[originHID] = edge->weight;
     }
 
+#if LINK_TO_HMETIS // HMETIS is compiled for i386
     // Set hyperedge count
     this->nhedges = hyperedges.size();
 
@@ -91,7 +102,45 @@ int PWayPartitioner::doPartition(void) {
     this->eind = new int[hyperedgeEndpointCount];
 
     // Populate HMETIS data structures
-    for (const auto &hedgeMembers : hyperedges) {
-        // TODO:
+    int eindIndex = 0;
+    int eptrIndex = 0;
+    for (const auto &[id, hedgeMembers] : hyperedges) {
+        this->hewgts[id] = weights[id];
+
+        // Store the starting location of this "eindIndex"th hyperedge
+        this->eptr[eptrIndex++] = eindIndex;
+
+        // Store all members of this hyperedge
+        for (const int hedgeTarget : hedgeMembers) {
+            this->eind[eindIndex++] = hedgeTarget;
+        }
     }
+
+    int *part;
+    int partitionsCreated;
+
+    HMETIS_PartKway(this->nvtxs, this->nhedges, NULL, this->eptr, this->eind, this->hewgts,
+                    this->desiredPartitionCount, UBFACTOR, hmetisOptions, part, &partitionsCreated);
+
+    return partitionsCreated;
+#else 
+    // We aren't linking to libhmetis, so run the standalone program as a system call
+    // First write the hypergraph input to a file for it to read
+    this->writeHMETISInput(hyperedges, weights);
+
+    // Run HMETIS
+    return this->invokeHMETIS();
+#endif
+}
+
+void PWayPartitioner::writeHMETISInput(const std::unordered_map<int, std::unordered_set<int>> &hedges,
+                                       const std::vector<int> &weights) {
+    // TODO: write data to temporary file in the format HMETIS reads
+}
+
+int PWayPartitioner::invokeHMETIS(void) {
+    // TODO: run khmetis via system call feeding it options and the temporary input file
+    // then read the output file partition data and return number of partitions
+    
+    return -1;
 }
