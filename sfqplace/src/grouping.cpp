@@ -17,6 +17,7 @@
 #include <CGAL/convex_hull_2.h>
 
 #include "netlist.hpp"
+#include "partitioning.hpp"
 #include "util.hpp"
 
 using namespace std;
@@ -394,6 +395,9 @@ void doGrouping(Netlist &netlist) {
     std::cout << "Subgraph 3 (Distance Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
 
     // TODO: Partitioning
+    PWayPartitioner partitioner(subgraphs.at(2), GROUP_SIZE_K);
+    std::cout << "Partitioning." << std::endl;
+    partitioner.doPartition();
 
     //groupCells(netlist);
     writeGroupingToFile("supercell_mapping.txt");

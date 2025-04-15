@@ -40,6 +40,8 @@ private:
     Subgraph *subgraph;
     int desiredPartitionCount;
 
+    std::string hmetisInputFilename;
+
     int nvtxs;
     int nhedges;
 
