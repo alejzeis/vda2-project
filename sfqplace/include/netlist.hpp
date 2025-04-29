@@ -62,9 +62,12 @@ public:
      * implementation (.net files). If successful this function returns true,
      * otherwise a return value of false indicates an error occurred.
      *
+     * @param genPadFile Generate a .kiaPad file with auto-spaced pad locations
+     *                   for all input and output cells in the netlist.
+     *
      * Do not include the file extension, that will be added automatically.
      */
-    bool saveHypergraphFile(const std::string &outFilePrefix);
+    bool saveHypergraphFile(const std::string &outFilePrefix, bool genPadFile);
 
     /**
      * Calculates the distance in terms of logic levels between two nodes.
@@ -79,7 +82,15 @@ private:
     // Does not include I/O pads!
     std::unordered_map<int, int> hyperIdMappings;
 
-    void hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFile, std::ostream &graphFile); 
+    void hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFile, std::ostream &graphFile);
+
+    /**
+     * Generates a .kiaPad file with auto-spaced pad locations for the given set of
+     * cell IDs.
+     */
+    bool generatePadFile(const std::string &outFilePrefix, 
+                         const std::unordered_set<int> &inPads,
+                         const std::unordered_set<int> &outPads);
 
     /**
      * Iterates through the netlist removing "fanout branches",

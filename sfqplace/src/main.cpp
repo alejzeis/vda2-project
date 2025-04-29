@@ -36,7 +36,7 @@ int main(int argv, char *argc[])
     netlist->loadFromDisk(iniscasFileName);
     
     std::cout << "Converting to hypergraph format." << std::endl;
-    netlist->saveHypergraphFile(argc[1]);
+    netlist->saveHypergraphFile(argc[1], true);
 
     std::cout << "Feeding hypergraph to FastPlace" << std::endl;
     int success = parseIbmFile(inareFileName, innetFileName, inPadLocationFileName);

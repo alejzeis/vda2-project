@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 
+static const int DEFAULT_CHIP_WIDTH = 15;
 static const int DEFAULT_CELL_AREA = 1;
 
 bool Netlist::loadFromDisk(const std::string &filename) {
@@ -164,7 +165,7 @@ bool Netlist::loadPlacementKiaPad(const std::string &filePrefix) {
     return status;
 }
 
-bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
+bool Netlist::saveHypergraphFile(const std::string &outputFilename, bool genPadFile) {
     // Modified ChatGPT generated code
     
     bool status = true;
@@ -183,15 +184,18 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
         int totalCells = this->size();
         std::unordered_set<int> uniqueHyperedges;
         std::unordered_set<int> gateCells;
-        std::unordered_set<int> padCells;
+        std::unordered_set<int> inPadCells;
+        std::unordered_set<int> outPadCells;
         
         for (const auto &pair : *this) {
             std::cout << "Node " << pair.first << "type: " << pair.second.nodeType << std::endl;
 
             if (!pair.second.isPrimaryInput && !pair.second.isPrimaryOutput) {
                 gateCells.insert(pair.first);
+            } else if (pair.second.isPrimaryInput) {
+                inPadCells.insert(pair.first);
             } else {
-                padCells.insert(pair.first);
+                outPadCells.insert(pair.first);
             }
 
             if (!pair.second.fanOutList.empty()) {
@@ -210,12 +214,20 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename) {
             this->hypergraphWriteNode(this->at(gateId), areaFile, outFile);
         }
 
-        for (int padId : padCells) {
+        for (int padId : inPadCells) {
+            this->hypergraphWriteNode(this->at(padId), areaFile, outFile);
+        }
+
+        for (int padId : outPadCells) {
             this->hypergraphWriteNode(this->at(padId), areaFile, outFile);
         }
        
         outFile.close();
         areaFile.close();
+
+        if (genPadFile) {
+            this->generatePadFile(outputFilename, inPadCells, outPadCells);
+        }
     }
 
     return status;
@@ -286,6 +298,37 @@ void Netlist::hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFil
             graphFile << fanoutPrefix << this->at(fanoutNode).hypergraphId << " l\n";
         }
     }
+}
+
+bool Netlist::generatePadFile(const std::string &outFilePrefix, 
+                              const std::unordered_set<int> &inPads,
+                              const std::unordered_set<int> &outPads) {
+    bool success = true;
+    std::ofstream out(outFilePrefix + ".kiaPad");
+
+    if (!out.is_open()) {
+        std::cerr << "Failed to open output file for generating .kiaPad" << std::endl;
+        success = false;
+    } else {
+        int x = 0;
+        int y = 20;
+        for (const int pad : inPads) {
+            out << 'p' << this->at(pad).hypergraphId << ' ' << x << ' ' << y << std::endl;
+            x += 1;
+        }
+
+        x = DEFAULT_CHIP_WIDTH; 
+        y = 0;
+
+        for (const int pad : outPads) {
+            out << 'p' << this->at(pad).hypergraphId << ' ' << x << ' ' << y << std::endl;
+            y += 5;
+        }
+
+        out.close();
+    }
+
+    return success;
 }
 
 void Netlist::eliminateFanoutBranches(void) {
