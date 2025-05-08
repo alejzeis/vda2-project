@@ -1,6 +1,7 @@
 #include "grouping.hpp"
 #include "partitioning.hpp"
 
+#include <string>
 #include <unordered_set>
 #include <fstream>
 
@@ -31,15 +32,19 @@ PWayPartitioner::~PWayPartitioner(void) {
 
 void PWayPartitioner::freeHMETISStructures(void) {
     if (this->hewgts != nullptr) {
-        delete this->hewgts;
+        delete [] this->hewgts;
     }
 
     if (this->eind != nullptr) {
-        delete this->eind;
+        delete [] this->eind;
     }
 
     if (this->eptr != nullptr) {
-        delete this->eptr;
+        delete [] this->eptr;
+    }
+
+    if (this->partitionedData != nullptr) {
+        delete [] this->partitionedData;
     }
 }
 
@@ -64,7 +69,6 @@ int PWayPartitioner::doPartition(void) {
     int nextHID = 0;
     this->hmetisIdsMap.clear();
     this->sgraphIdsMap.clear();
-    this->sgraphIdsMap.reserve(this->nvtxs);
     for (const auto &[sid, vertex] : this->subgraph->getVertices()) {
         this->hmetisIdsMap[sid] = nextHID;
         this->sgraphIdsMap[nextHID++] = sid;
@@ -120,17 +124,21 @@ int PWayPartitioner::doPartition(void) {
         }
     }
 
-    int *part;
     int partitionsCreated;
 
     HMETIS_PartKway(this->nvtxs, this->nhedges, NULL, this->eptr, this->eind, this->hewgts,
-                    this->desiredPartitionCount, UBFACTOR, hmetisOptions, part, &partitionsCreated);
+                    this->desiredPartitionCount, UBFACTOR,
+                    hmetisOptions, partitionedData, &partitionsCreated);
 
     return partitionsCreated;
-#else 
+#else
+    this->partitionedData = new int[this->nvtxs];
+
     // We aren't linking to libhmetis, so run the standalone program as a system call
     // First write the hypergraph input to a file for it to read
     this->writeHMETISInput(hyperedges, weights);
+
+    std::cout << "Size:" << sgraphIdsMap.size() << std::endl;
 
     // Run HMETIS
     return this->invokeHMETIS();
@@ -175,8 +183,40 @@ void PWayPartitioner::writeHMETISInput(const std::unordered_map<int, std::unorde
 }
 
 int PWayPartitioner::invokeHMETIS(void) {
-    // TODO: run khmetis via system call feeding it options and the temporary input file
+    // run khmetis via system call feeding it options and the temporary input file
     // then read the output file partition data and return number of partitions
-    
-    return -1;
+    std::string hmetisCmd = "./khmetis " + this->hmetisInputFilename 
+                            + " " + std::to_string(this->desiredPartitionCount)
+                            + " " + std::to_string(UBFACTOR)
+                            + " 10 3 2 1 2";
+    std::cout << "Running HMETIS with command: " << hmetisCmd << std::endl;
+
+    int ret = system(hmetisCmd.c_str());
+
+    std::string partFilename = this->hmetisInputFilename 
+                                + ".part." + std::to_string(this->desiredPartitionCount);
+    std::ifstream infile(partFilename);
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open partition file: " << partFilename << std::endl;
+        return -1;
+    }
+
+    int hmetisVertexId = 0;
+    std::string line;
+
+    while (std::getline(infile, line)) {
+        int supercellId = std::stoi(line);
+        if (this->sgraphIdsMap.find(hmetisVertexId) == this->sgraphIdsMap.end()) {
+            std::cerr << "Vertex ID " << hmetisVertexId << " not found in sgraph map." << std::endl;
+        } else {
+            int originalNodeId = this->sgraphIdsMap[hmetisVertexId];
+            this->verticesToSupercells[originalNodeId] = supercellId;
+        }
+        
+        hmetisVertexId++;
+    }
+
+    infile.close();
+    std::cout << "Partitioning completed. " << hmetisVertexId << " nodes assigned to super-cells." << std::endl;
+    return this->desiredPartitionCount;    
 }

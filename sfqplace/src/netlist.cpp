@@ -2,6 +2,7 @@
 #include "suraj_parser.h"
 
 #include <climits>
+#include <functional>
 #include <iostream>
 #include <fstream>
 #include <ostream>
@@ -10,7 +11,8 @@
 #include <sstream>
 #include <string>
 
-static const int DEFAULT_CHIP_WIDTH = 15;
+static const int DEFAULT_CHIP_WIDTH = 8;
+static const int DEFAULT_CHIP_HEIGHT = 8;
 static const int DEFAULT_CELL_AREA = 1;
 
 bool Netlist::loadFromDisk(const std::string &filename) {
@@ -184,8 +186,8 @@ bool Netlist::saveHypergraphFile(const std::string &outputFilename, bool genPadF
         int totalCells = this->size();
         std::unordered_set<int> uniqueHyperedges;
         std::unordered_set<int> gateCells;
-        std::unordered_set<int> inPadCells;
-        std::unordered_set<int> outPadCells;
+        std::set<int, std::greater<int>> inPadCells;
+        std::set<int, std::greater<int>> outPadCells;
         
         for (const auto &pair : *this) {
             std::cout << "Node " << pair.first << "type: " << pair.second.nodeType << std::endl;
@@ -301,8 +303,8 @@ void Netlist::hypergraphWriteNode(const NetlistNode &node, std::ostream &areaFil
 }
 
 bool Netlist::generatePadFile(const std::string &outFilePrefix, 
-                              const std::unordered_set<int> &inPads,
-                              const std::unordered_set<int> &outPads) {
+                              const std::set<int, std::greater<int>> &inPads,
+                              const std::set<int, std::greater<int>> &outPads) {
     bool success = true;
     std::ofstream out(outFilePrefix + ".kiaPad");
 
@@ -311,19 +313,24 @@ bool Netlist::generatePadFile(const std::string &outFilePrefix,
         success = false;
     } else {
         int x = 0;
-        int y = 20;
+        int y = 1;
+
+        x = 0; 
+        y = DEFAULT_CHIP_HEIGHT;
+
+        for (const int pad : outPads) {
+            out << 'p' << this->at(pad).hypergraphId << ' ' << x << ' ' << y << std::endl;
+            x += 1;
+        }
+
+        x = 0;
+        y = 1;
+
         for (const int pad : inPads) {
             out << 'p' << this->at(pad).hypergraphId << ' ' << x << ' ' << y << std::endl;
             x += 1;
         }
 
-        x = DEFAULT_CHIP_WIDTH; 
-        y = 0;
-
-        for (const int pad : outPads) {
-            out << 'p' << this->at(pad).hypergraphId << ' ' << x << ' ' << y << std::endl;
-            y += 5;
-        }
 
         out.close();
     }

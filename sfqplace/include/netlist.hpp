@@ -1,6 +1,7 @@
 #ifndef SFQPLACE_NETLIST_HPP
 #define SFQPLACE_NETLIST_HPP
 
+#include <functional>
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
@@ -89,8 +90,8 @@ private:
      * cell IDs.
      */
     bool generatePadFile(const std::string &outFilePrefix, 
-                         const std::unordered_set<int> &inPads,
-                         const std::unordered_set<int> &outPads);
+                         const std::set<int, std::greater<int>> &inPads,
+                         const std::set<int, std::greater<int>> &outPads);
 
     /**
      * Iterates through the netlist removing "fanout branches",

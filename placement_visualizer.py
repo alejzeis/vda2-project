@@ -30,9 +30,9 @@ def plot_points(file_path):
     print(f'Total cells (including I/O pads): {total}, valid: {valid}')
 
     # Plot cells
-    plt.scatter(x_cells, y_cells, c='blue', label='Cells', s=1)
+    plt.scatter(x_cells, y_cells, c='blue', label='Cells', s=35)
     # Plot I/O pads
-    plt.scatter(x_pads, y_pads, c='red', label='I/O Pads', s=5)
+    plt.scatter(x_pads, y_pads, c='red', label='I/O Pads', s=35)
 
     plt.xlabel('X')
     plt.ylabel('Y')

@@ -55,12 +55,15 @@ private:
     // Array that maps the index to which partition it belongs to
     int *partitionedData;
 
+    // Mapping of each vertex to its corresponding partition
+    std::unordered_map<int, int> verticesToSupercells;
+
     // Mapping from the subgraph vertex IDs to IDs for HMETIS
     // IDs in the subgraph are same as the netlist, so they might not start at zero
     // HMETIS needs consecutive IDs starting at 0
     std::unordered_map<int, int> hmetisIdsMap;
     // Mapping from HMETIS IDs to subgraph vertex IDs
-    std::vector<int> sgraphIdsMap;
+    std::unordered_map<int, int> sgraphIdsMap;
 
     void writeHMETISInput(const std::unordered_map<int, std::unordered_set<int>> &hedges,
                           const std::vector<int> &weights);

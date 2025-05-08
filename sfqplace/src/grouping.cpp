@@ -22,7 +22,7 @@
 
 using namespace std;
 
-const int GROUP_SIZE_K = 4; // default grouping size
+const int GROUP_SIZE_K = 2; // default grouping size
 
 static const int MAX_SEARCH_LEVEL = 2;
 static const int NORMALIZATION_FACTOR = MAX_SEARCH_LEVEL;
@@ -395,9 +395,26 @@ void doGrouping(Netlist &netlist) {
     std::cout << "Subgraph 3 (Distance Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
 
     // TODO: Partitioning
-    PWayPartitioner partitioner(subgraphs.at(2), GROUP_SIZE_K);
-    std::cout << "Partitioning." << std::endl;
-    partitioner.doPartition();
+    for (const auto &[level, subgraph] : subgraphs) {
+        int p = std::ceil(subgraph->getVertices().size() / (1.0 * GROUP_SIZE_K));
+
+        if (p <= 1) {
+            // Too small, place all cells into a single supercell
+            std::cout << "Logic level" << subgraph->getLogicLevel();
+            std::cout << " is too small to partition. All cells in single supercell";
+            std::cout << std::endl;
+        } else {
+            PWayPartitioner partitioner(subgraph, p);
+
+            std::cout << "Partitioning logic level " << subgraph->getLogicLevel();
+            std::cout << " into " << p << " parts" << std::endl;
+            if (partitioner.doPartition() < 0) {
+                // Partitioning failed. Place all these cells into a single supercell
+                std::cerr << "WARNING: couldn't partition logic level ";
+                std::cerr << subgraph->getLogicLevel() << std::endl;
+            }
+        }
+    }
 
     //groupCells(netlist);
     writeGroupingToFile("supercell_mapping.txt");
