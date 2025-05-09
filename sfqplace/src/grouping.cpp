@@ -18,6 +18,7 @@
 
 #include "netlist.hpp"
 #include "partitioning.hpp"
+#include "supercells.hpp"
 #include "util.hpp"
 
 using namespace std;
@@ -50,7 +51,10 @@ static Subgraph* makeSubgraph(Netlist &netlist, int logicLevel) {
             SubgraphVertex vert;
             vert.id = gateID;
 
-            graph->addVertex(vert);
+            // Only work with moveable cells in the subgraph
+            if (!netlist.at(gateID).isPrimaryInput && !netlist.at(gateID).isPrimaryOutput) {
+                graph->addVertex(vert);
+            }
         }
     }
 
@@ -158,32 +162,38 @@ SubgraphVertex& Subgraph::getVertex(int id) {
 
 void Subgraph::addEdge(int origin, int target, double weight) {
     SubgraphEdge *edge;
-    SubgraphVertex &originVert = this->graph.at(origin);
-    SubgraphVertex &targetVert = this->graph.at(target);
 
-    // Check if an edge already exists in the graph
-    if (originVert.connections.find(target) != originVert.connections.end()) {
-        // Edge exists origin -> target. Update it
-        edge = originVert.connections.at(target);
+    // Ensure both vertices of this edge are in the graph
+    // (they might not be if one is an I/O pad)
+    if (this->graph.find(target) != this->graph.end() 
+            && this->graph.find(origin) != this->graph.end()) {
+        SubgraphVertex &originVert = this->graph.at(origin);
+        SubgraphVertex &targetVert = this->graph.at(target);
 
-        // Update weight by adding
-        edge->weight += weight;
-    } else if (targetVert.connections.find(origin) != targetVert.connections.end()) {
-        // Edge exists target -> origin.
-        // We don't care about direction, so this is the same edge. update it
-        edge = targetVert.connections.at(origin);
+        // Check if an edge already exists in the graph
+        if (originVert.connections.find(target) != originVert.connections.end()) {
+            // Edge exists origin -> target. Update it
+            edge = originVert.connections.at(target);
 
-        edge->weight += weight;
-    } else {
-        edge = new SubgraphEdge;
-        edge->originNode = origin;
-        edge->targetNode = target;
-        edge->weight = weight;
+            // Update weight by adding
+            edge->weight += weight;
+        } else if (targetVert.connections.find(origin) != targetVert.connections.end()) {
+            // Edge exists target -> origin.
+            // We don't care about direction, so this is the same edge. update it
+            edge = targetVert.connections.at(origin);
 
-        // Add edge to graph
-        this->edges.insert(edge);
-        originVert.connections[target] = edge;
-        targetVert.connections[origin] = edge;
+            edge->weight += weight;
+        } else {
+            edge = new SubgraphEdge;
+            edge->originNode = origin;
+            edge->targetNode = target;
+            edge->weight = weight;
+
+            // Add edge to graph
+            this->edges.insert(edge);
+            originVert.connections[target] = edge;
+            targetVert.connections[origin] = edge;
+        }
     }
 }
 
@@ -394,27 +404,9 @@ void doGrouping(Netlist &netlist) {
 
     std::cout << "Subgraph 3 (Distance Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
 
-    // TODO: Partitioning
-    for (const auto &[level, subgraph] : subgraphs) {
-        int p = std::ceil(subgraph->getVertices().size() / (1.0 * GROUP_SIZE_K));
-
-        if (p <= 1) {
-            // Too small, place all cells into a single supercell
-            std::cout << "Logic level" << subgraph->getLogicLevel();
-            std::cout << " is too small to partition. All cells in single supercell";
-            std::cout << std::endl;
-        } else {
-            PWayPartitioner partitioner(subgraph, p);
-
-            std::cout << "Partitioning logic level " << subgraph->getLogicLevel();
-            std::cout << " into " << p << " parts" << std::endl;
-            if (partitioner.doPartition() < 0) {
-                // Partitioning failed. Place all these cells into a single supercell
-                std::cerr << "WARNING: couldn't partition logic level ";
-                std::cerr << subgraph->getLogicLevel() << std::endl;
-            }
-        }
-    }
+    SupercellsPlacer supercells(&netlist, &subgraphs);
+    supercells.process();
+    supercells.displaySupercells(std::cout);
 
     //groupCells(netlist);
     writeGroupingToFile("supercell_mapping.txt");

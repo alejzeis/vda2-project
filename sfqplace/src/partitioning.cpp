@@ -220,3 +220,7 @@ int PWayPartitioner::invokeHMETIS(void) {
     std::cout << "Partitioning completed. " << hmetisVertexId << " nodes assigned to super-cells." << std::endl;
     return this->desiredPartitionCount;    
 }
+
+std::unordered_map<int, int> PWayPartitioner::getPartitions() {
+    return this->verticesToSupercells;
+}
