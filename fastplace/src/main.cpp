@@ -46,7 +46,7 @@ int main(int argv, char *argc[])
     // call function(s) dealing with creating the Q matrix, placement, etc.
 
     PA3Placement::AnalyticPlacer placer;
-    placer.doPlacement();
+    placer.doPlacement(argc[1]);
 
     free(pinLocations);
     free(hEdge_idxToFirstEntryInPinArray);

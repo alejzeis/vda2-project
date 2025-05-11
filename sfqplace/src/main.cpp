@@ -50,12 +50,12 @@ int main(int argv, char *argc[])
     PA3Placement::AnalyticPlacer placer;
 
     std::cout << "Invoking FastPlace" << std::endl;
-    placer.doPlacement();
+    placer.doPlacement(argc[1]);
 
     std::cout << "Loading initial Placement data" << std::endl;
 
-    // Placement is saved in "spread.kiaPad"
-    netlist->loadPlacementKiaPad("spread");
+    // Placement is saved in "xx_spread.kiaPad"
+    netlist->loadPlacementKiaPad(std::string(argc[1]) + "_spread");
 
     std::cout << "NETLIST OBJECT DUMP:" << std::endl;
     std::cout << *netlist << std::endl;

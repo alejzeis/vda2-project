@@ -198,7 +198,7 @@ namespace PA3Placement
         return dimensions;
     }
 
-    void AnalyticPlacer::doPlacement()
+    void AnalyticPlacer::doPlacement(std::string filePrefix)
     {
         std::cout << "Constructing Matrices..." << std::endl;
         // Create Q, Dx, Dy matrices
@@ -262,7 +262,7 @@ namespace PA3Placement
         std::cout << "Sqrt of total Wirelength: " << sqrt(wirelength) << std::endl;
 
         std::cout << "Spreading..." << std::endl;
-        this->doSpreading();
+        this->doSpreading(filePrefix);
 
         std::cout << "Sqrt of total Wirelength (post-spreading): " << sqrt(this->calculateTotalWirelength(this->spreadedCellLocations)) << std::endl;
 #else
@@ -478,7 +478,7 @@ namespace PA3Placement
         }
     }
 
-    void AnalyticPlacer::doSpreading()
+    void AnalyticPlacer::doSpreading(std::string filePrefix)
     {
         this->spreadedCellLocations.resize(cellLocations.size());
         this->spreadedCellLocations.clear();
@@ -499,6 +499,6 @@ namespace PA3Placement
         // Creates the uneqal bins and computes the spreaded cell locations
         this->calculateSpreadedCellLocations();
 
-        this->saveSpreadedCellsToDisk("spread.kiaPad");
+        this->saveSpreadedCellsToDisk(filePrefix + "_spread.kiaPad");
     }
 }

@@ -59,7 +59,7 @@ namespace PA3Placement
         void saveCellLocationsToDisk(std::string filename);
         void saveSpreadedCellsToDisk(std::string filename);
 
-        void doSpreading();
+        void doSpreading(std::string filePrefix);
         void calculateSpreadedCellLocations();
         void createBins();
         void updateBinUtilizations();
@@ -67,7 +67,7 @@ namespace PA3Placement
         int getBinIndex(std::pair<double, double> coordinates, std::vector<Bin> &binsList);
         Bin* getBin(std::pair<double, double> coordinates, std::vector<Bin> &binsList);
     public:
-        void doPlacement();
+        void doPlacement(std::string filePrefix);
     };
 }
 

@@ -13,7 +13,7 @@
 
 static const int DEFAULT_CHIP_WIDTH = 8;
 static const int DEFAULT_CHIP_HEIGHT = 8;
-static const int DEFAULT_CELL_AREA = 1;
+static const int DEFAULT_CELL_AREA = 4;
 
 bool Netlist::loadFromDisk(const std::string &filename) {
     // Modified ChatGPT generated code

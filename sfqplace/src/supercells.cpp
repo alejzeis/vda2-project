@@ -47,6 +47,18 @@ void SupercellsPlacer::process() {
     }
 
     this->createSupercellNetlist();
+
+    // Write FastPlace-format input files for this supercell netlist
+    this->supercellNetlist.saveHypergraphFile("supercells", true);
+
+    // Invoke FastPlace 
+    // run khmetis via system call feeding it options and the temporary input file
+    // then read the output file partition data and return number of partitions
+    std::string cmd = "./PA3 supercells";
+    std::cout << "Running FastPlace with command: " << cmd << std::endl;
+
+    int ret = system(cmd.c_str());
+    std::cout << "FastPlace finished with code: " << ret << std::endl;
 }
 
 void SupercellsPlacer::createSupercell(int id, Subgraph &subgraph) {
@@ -142,6 +154,4 @@ void SupercellsPlacer::createSupercellNetlist() {
         this->supercellNetlist[supercell] = supercellNode;
     }
 
-    // Write FastPlace-format input files for this supercell netlist
-    this->supercellNetlist.saveHypergraphFile("supercells", true);
 }
