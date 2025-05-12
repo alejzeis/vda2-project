@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <limits>
+#include <ostream>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -344,9 +345,11 @@ void distanceGraphProcessing(Netlist &netlist) {
                                 / (subgraph->getMaxCellDistance() - subgraph->getMinCellDistance()))
                             );
 
+#if 0
                     std::cout << "Xu: " << Xu << ", " << Xv;
                     std::cout << " Min Max: " << subgraph->getMinCellDistance() << " ";
                     std::cout << subgraph->getMaxCellDistance() << std::endl;
+#endif
 
                     double W = floor(sqrt(pow(Wx, 2) + pow(Wy, 2)));
 
@@ -382,34 +385,40 @@ void doGrouping(Netlist &netlist) {
     // Dummy parser: insert gate parsing code here or link to your existing parser
     // Example: parsingCircuitFile("b15_1.isc", netlist);
 
+    std::cout << "Computing Logic levels..." << std::endl;
     computeLogicLevels(netlist);
+
 
     // Create the subgraphs for each logic level
     for (const auto &[level, nodes] : levelToNodes) {
+        std::cout << "Creating subgraph for level " << level << std::endl;
         subgraphs[level] = makeSubgraph(netlist, level);
     }
+
+    std::cout << "Running connectivity-based graph processing" << std::endl;
 
     // Run connectivity-based graph processing step
     connectivityGraphProcessing(netlist);
 
     // Calculate min/max cell distances
     for (const auto &[level, subgraph] : subgraphs) {
+        std::cout << "Calculating min/max cell distances for subgraph " << level << std::endl;
         subgraph->calcMinMaxCellDistances(netlist);
     }
 
+#if 0
     std::cout << "Subgraph 3 (Connectivity Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
+#endif
 
     // Run Distance-based Graph Processing step
+    std::cout << "Running distance-based graph processing" << std::endl;
     distanceGraphProcessing(netlist);
 
+#if 0
     std::cout << "Subgraph 3 (Distance Processed)" << std::endl << *(subgraphs.at(3)) << std::endl;
+#endif
 
     SupercellsPlacer supercells(&netlist, &subgraphs);
     supercells.process();
     supercells.displaySupercells(std::cout);
-
-    //groupCells(netlist);
-    writeGroupingToFile("supercell_mapping.txt");
-
-    // TODO: delete subgraphs?
 }

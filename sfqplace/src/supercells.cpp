@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-static const int GROUP_SIZE_K = 2;
+static const int GROUP_SIZE_K = 4;
 
 SupercellsPlacer::SupercellsPlacer(Netlist *ogNet, std::unordered_map<int, Subgraph*> *subgraphs) {
     this->originalNetlist = ogNet;
@@ -12,6 +12,8 @@ SupercellsPlacer::SupercellsPlacer(Netlist *ogNet, std::unordered_map<int, Subgr
 
 void SupercellsPlacer::process() {
     this->supercells.clear();
+
+    std::cout << "Begin subgraph partitioning" << std::endl;
 
     // Perform partitioning
     int nextSupercellId = 0;
@@ -46,6 +48,7 @@ void SupercellsPlacer::process() {
         }
     }
 
+    std::cout << "Creating supercell netlist" << std::endl;
     this->createSupercellNetlist();
 
     // Write FastPlace-format input files for this supercell netlist
@@ -129,7 +132,9 @@ void SupercellsPlacer::createSupercellNetlist() {
                     // This supercell fans out to this I/O pad, so add ourself to it's fanin
                     this->supercellNetlist[dependency].fanInList.insert(supercell);
                 } else {
-                    supercellNode.fanOutList.insert(this->verticesToSupercells.at(dependency));
+                    if (this->verticesToSupercells.find(dependency) != this->verticesToSupercells.end()) {
+                        supercellNode.fanOutList.insert(this->verticesToSupercells.at(dependency));
+                    }
                 }
 
                 //std::cout << "Supercell " << supercell << " fans out to " << dependency << std::endl;

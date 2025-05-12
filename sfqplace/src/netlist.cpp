@@ -11,8 +11,8 @@
 #include <sstream>
 #include <string>
 
-static const int DEFAULT_CHIP_WIDTH = 8;
-static const int DEFAULT_CHIP_HEIGHT = 8;
+static const int DEFAULT_CHIP_WIDTH = 6;
+static const int DEFAULT_CHIP_HEIGHT = 6;
 static const int DEFAULT_CELL_AREA = 4;
 
 bool Netlist::loadFromDisk(const std::string &filename) {

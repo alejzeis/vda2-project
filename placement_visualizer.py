@@ -6,6 +6,7 @@ def plot_points(file_path):
     x_cells, y_cells = [], []
     x_pads, y_pads = [], []
 
+    moveable_cells = 0
     valid = 0
     total = 0
 
@@ -21,6 +22,7 @@ def plot_points(file_path):
             else:
                 x_cells.append(x)
                 y_cells.append(y)
+                moveable_cells += 1
 
             total += 1
 
@@ -28,6 +30,7 @@ def plot_points(file_path):
                 valid += 1
 
     print(f'Total cells (including I/O pads): {total}, valid: {valid}')
+    print(f'Total cells (excluding I/O pads): {moveable_cells}')
 
     # Plot cells
     plt.scatter(x_cells, y_cells, c='blue', label='Cells', s=35)
