@@ -1,7 +1,0 @@
-Pre-spreading:
-Total Wirelength: 36697.9
-Sqrt of total Wirelength: 191.567
-
-POST-Spreading:
-Sqrt of total Wirelength (post-spreading): 520.808
-
