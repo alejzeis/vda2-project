@@ -12,8 +12,8 @@ find_package(CGAL REQUIRED)
 
 # Import hmetis static library 
 if (NOT HMETIS_PATH)
-    message(FATAL_ERROR "Please define variable HMETIS_PATH: path to libhmetis.a")
-else()
+    message(WARNING "HMETIS_PATH not definied (path to libhmetis.a). Will not link to HMETIS directly")
+elseif(LINK_HMETIS)
     add_library(hmetis STATIC IMPORTED)
     set_target_properties(hmetis PROPERTIES IMPORTED_LOCATION ${HMETIS_PATH})
 endif()
@@ -40,5 +40,9 @@ target_include_directories(sfqplace PRIVATE
     ${SFQPLACE_ROOT}/include
     ${FASTPLACE_ROOT}/include
 )
-target_link_libraries(sfqplace fastplace gmp hmetis)
+target_link_libraries(sfqplace fastplace gmp)
+if (LINK_HMETIS)
+    target_link_libraries(sfqplace hmetis)
+    target_compile_definitions(sfqplace LINK_TO_HMETIS)
+endif()
 

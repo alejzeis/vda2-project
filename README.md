@@ -1,4 +1,7 @@
 # vda2-project
+## Dependencies
+- [hMETIS](https://karypis.github.io/glaros/software/metis/overview.html) (Runtime dependency)
+- [cgal](https://www.cgal.org/)
 ## Building
 
 This repository contains two programs: an implementation of FastPlace from EE5301, and 
